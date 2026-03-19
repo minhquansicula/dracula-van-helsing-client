@@ -1,0 +1,36 @@
+import { Routes, Route } from "react-router-dom";
+import { ROUTES } from "../constants/routes";
+
+// Pages
+import Login from "../pages/Auth/Login";
+import Register from "../pages/Auth/Register";
+import Lobby from "../pages/Lobby/Lobby";
+import GameRoom from "../pages/Game/GameRoom";
+import NotFound from "../pages/Errors/NotFound";
+
+// Route Guards
+import ProtectedRoute from "./ProtectedRoute";
+import PublicRoute from "./PublicRoute";
+
+const AppRouter = () => {
+  return (
+    <Routes>
+      {/* Public Routes (Chỉ cho người chưa đăng nhập) */}
+      <Route element={<PublicRoute />}>
+        <Route path={ROUTES.LOGIN} element={<Login />} />
+        <Route path={ROUTES.REGISTER} element={<Register />} />
+      </Route>
+
+      {/* Protected Routes (Bắt buộc đăng nhập) */}
+      <Route element={<ProtectedRoute />}>
+        <Route path={ROUTES.HOME} element={<Lobby />} />
+        <Route path={ROUTES.GAME_ROOM} element={<GameRoom />} />
+      </Route>
+
+      {/* 404 Route */}
+      <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
+    </Routes>
+  );
+};
+
+export default AppRouter;
