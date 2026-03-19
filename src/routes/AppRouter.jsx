@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
 
 // Pages
+import LandingPage from "../pages/Home/LandingPage";
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
 import Lobby from "../pages/Lobby/Lobby";
@@ -15,6 +16,9 @@ import PublicRoute from "./PublicRoute";
 const AppRouter = () => {
   return (
     <Routes>
+      {/* Trang chủ - Ai cũng có thể truy cập */}
+      <Route path={ROUTES.HOME} element={<LandingPage />} />
+
       {/* Public Routes (Chỉ cho người chưa đăng nhập) */}
       <Route element={<PublicRoute />}>
         <Route path={ROUTES.LOGIN} element={<Login />} />
@@ -23,7 +27,7 @@ const AppRouter = () => {
 
       {/* Protected Routes (Bắt buộc đăng nhập) */}
       <Route element={<ProtectedRoute />}>
-        <Route path={ROUTES.HOME} element={<Lobby />} />
+        <Route path={ROUTES.LOBBY} element={<Lobby />} />
         <Route path={ROUTES.GAME_ROOM} element={<GameRoom />} />
       </Route>
 

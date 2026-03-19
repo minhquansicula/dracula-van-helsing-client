@@ -14,7 +14,7 @@ const PublicRoute = () => {
     );
   }
 
-  return !user ? <Outlet /> : <Navigate to={ROUTES.HOME} replace />;
+  return !user ? <Outlet /> : <Navigate to={ROUTES.LOBBY} replace />;
 };
 
 export default PublicRoute;

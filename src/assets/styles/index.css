@@ -1,0 +1,54 @@
+/* Đã đổi Cinzel thành Playfair Display, hỗ trợ đầy đủ tiếng Việt (vietnamese) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-game-dark-teal text-game-bone-white antialiased;
+    font-family: "Inter", sans-serif;
+  }
+
+  /* Áp dụng font Playfair Display cho tất cả các thẻ tiêu đề để tạo sự sang trọng, ma mị */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Playfair Display", serif;
+  }
+}
+
+@layer utilities {
+  /* Text Shadows ma quỷ */
+  .shadow-text-xs {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+  .shadow-text-sm {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+  .shadow-text-lg {
+    text-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.9),
+      0 0 15px rgba(212, 214, 198, 0.2);
+  }
+  .shadow-text-md {
+    text-shadow:
+      0 3px 6px rgba(0, 0, 0, 0.9),
+      0 0 10px rgba(212, 214, 198, 0.1);
+  }
+
+  /* Custom Checkbox - Ma quỷ hóa cái checkbox mặc định */
+  input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    @apply transition-all duration-300;
+  }
+  input[type="checkbox"]:checked {
+    @apply bg-game-dracula-orange border-game-dracula-orange;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+  }
+}

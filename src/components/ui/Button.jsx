@@ -5,34 +5,46 @@ const Button = ({
   variant = "dracula",
   size = "md",
   className = "",
+  isLoading,
   ...props
 }) => {
   const baseClasses =
-    "font-bold rounded focus:outline-none transition ease-in-out duration-150";
+    "font-black rounded-sm uppercase tracking-widest transition-all duration-300 ease-in-out focus:outline-none transform active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed";
 
   const variants = {
-    // Nút hành động chính, nóng bỏng (ví dụ: Tạo phòng, Bắt đầu)
-    dracula:
-      "bg-game-dracula-orange text-white hover:bg-opacity-90 active:bg-opacity-80",
-    // Nút hành động phụ, lạnh lẽo (ví dụ: Huỷ, Quay lại)
-    vanhelsing:
-      "bg-game-vanhelsing-blood text-white hover:bg-opacity-90 active:bg-opacity-80",
-    // Nút ít quan trọng hơn, lạnh (ví dụ: Vào phòng)
-    cold: "bg-game-dark-teal text-game-bone-white border border-game-bone-white hover:bg-opacity-10 active:bg-opacity-20",
+    // Dracula - Fire & Fury
+    dracula: `bg-game-dracula-orange text-white 
+              border border-game-dracula-orange 
+              hover:shadow-[0_0_20px_rgba(225,85,37,0.7)] 
+              hover:-translate-y-0.5`,
+
+    // Van Helsing - Blood & Determination
+    vanhelsing: `bg-game-vanhelsing-blood text-game-bone-white 
+                 border border-game-vanhelsing-blood 
+                 hover:shadow-[0_0_20px_rgba(154,27,31,0.7)] 
+                 hover:-translate-y-0.5`,
   };
 
   const sizes = {
-    sm: "px-3 py-1 text-sm",
-    md: "px-5 py-2 text-md",
-    lg: "px-8 py-3 text-lg",
+    sm: "px-4 py-1.5 text-xs",
+    md: "px-6 py-2.5 text-sm shadow-md",
+    lg: "px-10 py-3.5 text-base shadow-lg",
   };
 
   return (
     <button
       className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
+      disabled={isLoading}
       {...props}
     >
-      {children}
+      {isLoading ? (
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          Đang triệu hồi...
+        </div>
+      ) : (
+        children
+      )}
     </button>
   );
 };

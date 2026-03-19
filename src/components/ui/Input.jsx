@@ -1,17 +1,30 @@
 import React from "react";
 
-const Input = ({ label, className = "", ...props }) => {
+const Input = ({ label, error, className = "", ...props }) => {
   return (
-    <div className={`mb-4 ${className}`}>
+    <div className={`mb-5 ${className}`}>
       {label && (
-        <label className="block text-game-bone-white text-sm font-bold mb-2">
+        <label className="block text-game-bone-white text-xs font-black uppercase tracking-widest mb-1.5 shadow-text-sm">
           {label}
         </label>
       )}
       <input
-        className="shadow appearance-none border border-game-dark-teal rounded w-full py-2 px-3 text-white bg-game-dark-teal bg-opacity-50 leading-tight focus:outline-none focus:ring-2 focus:ring-game-dracula-orange"
+        className="w-full px-4 py-2.5 
+                   bg-black/40 text-game-bone-white 
+                   border border-game-dark-teal 
+                   rounded-sm 
+                   placeholder:text-game-bone-white/30 
+                   text-sm 
+                   transition-all duration-300 ease-in-out
+                   focus:outline-none focus:border-game-dracula-orange focus:ring-1 focus:ring-game-dracula-orange
+                   focus:shadow-[0_0_15px_rgba(225,85,37,0.5)]"
         {...props}
       />
+      {error && (
+        <p className="text-game-dracula-orange text-xs mt-1.5 italic shadow-text-xs">
+          * {error}
+        </p>
+      )}
     </div>
   );
 };
