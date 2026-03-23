@@ -1,6 +1,7 @@
+// src/hooks/useAuth.js (Cập nhật lại để sử dụng authService)
 import { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import axiosClient from "../api/axiosClient";
+import authService from "../services/authService";
 
 export const useAuth = () => {
   const {
@@ -16,8 +17,8 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axiosClient.post("/auth/login", credentials);
-      login(response.data.token);
+      const data = await authService.login(credentials);
+      login(data.token);
       return { success: true };
     } catch (err) {
       const message =
@@ -34,8 +35,8 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axiosClient.post("/auth/register", userData);
-      login(response.data.token);
+      const data = await authService.register(userData);
+      login(data.token);
       return { success: true };
     } catch (err) {
       const message =

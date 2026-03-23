@@ -1,52 +1,35 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../../contexts/AuthContext";
 import { ROUTES } from "../../constants/routes";
-// import axiosClient from "../../api/axiosClient"; // Tạm thời tắt
+import { useAuth } from "../../hooks/useAuth"; // Đảm bảo đường dẫn import đúng thư mục chứa useAuth.js của bạn
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
-
-// Một chuỗi JWT giả mạo để lừa hàm jwtDecode trong AuthContext
-// Nó chứa thông tin: { "sub": "mock-user-1", "unique_name": "Kẻ Săn Máu", "exp": 9999999999 }
-const MOCK_JWT_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtb2NrLXVzZXItMSIsInVuaXF1ZV9uYW1lIjoiS+G6uyBTMqNuIE3DoXUiLCJleHAiOjk5OTk5OTk5OTl9.fake_signature_here";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const { login } = useContext(AuthContext);
+
+  const { loginUser, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    setLocalError("");
 
-    try {
-      // Giả lập thời gian loading mạng
-      await new Promise((res) => setTimeout(res, 1000));
+    // Gọi API qua useAuth hook
+    const result = await loginUser({ username, password });
 
-      // ---- LOGIC GIẢ LẬP ----
-      if (password !== "123456") {
-        throw new Error("Để test giao diện, vui lòng nhập mật ngữ là: 123456");
-      }
-
-      // Gọi hàm login với token giả
-      login(MOCK_JWT_TOKEN);
-
-      // Kích hoạt hiệu ứng chuyển trang
+    if (result.success) {
+      // Kích hoạt hiệu ứng chuyển trang nếu API trả về token thành công
       setIsTransitioning(true);
       setTimeout(() => {
         navigate(ROUTES.LOBBY);
       }, 700);
-    } catch (err) {
-      setError(
-        err.message || "Lời nguyền thất bại. Sai danh tính hoặc mật ngữ.",
-      );
-      setIsLoading(false);
+    } else {
+      // Hiển thị lỗi từ Backend (hoặc lỗi default từ hook)
+      setLocalError(result.message);
     }
   };
 
@@ -72,9 +55,9 @@ const Login = () => {
             <div className="w-24 h-px bg-gradient-to-r from-transparent via-game-dracula-orange to-transparent mx-auto mt-4"></div>
           </header>
 
-          {error && (
+          {localError && (
             <div className="bg-game-vanhelsing-blood/20 border border-game-vanhelsing-blood text-game-bone-white px-4 py-3 rounded-sm mb-6 text-center text-sm italic shadow-[0_0_15px_rgba(154,27,31,0.5)]">
-              {error}
+              {localError}
             </div>
           )}
 
@@ -89,7 +72,7 @@ const Login = () => {
               autoComplete="username"
             />
             <Input
-              label="Mật ngữ: 123456 (Để Test)"
+              label="Mật ngữ"
               type="password"
               placeholder="******"
               value={password}
