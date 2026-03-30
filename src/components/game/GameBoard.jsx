@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Card from "./Card";
+import MapTokens from "./MapTokens";
 
 import boardBg from "../../assets/images/board-bg.png";
 import bloodToken from "../../assets/images/blood.svg";
@@ -11,23 +12,30 @@ import crossToken from "../../assets/images/cross.svg";
 
 import { districts } from "../../components/game/bonus/mapConfig";
 
+const smoothTransition =
+  "transition-[transform,opacity,filter,box-shadow] duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] transform-gpu";
+
 const PlayerStatusWidget = ({ player, type }) => {
   const isSelf = type === "self";
   const usernameColor = isSelf ? "text-white" : "text-white/90";
   const labelColor = isSelf
     ? "text-game-dracula-orange"
     : "text-game-vanhelsing-blood";
-  const hpColor = isSelf ? "text-game-dracula-orange" : "text-white";
+  const hpColor = isSelf ? "text-game-dracula-orange" : "text-white/90";
   const hpShadow = isSelf
-    ? "drop-shadow-[0_0_15px_rgba(225,85,37,0.5)]"
-    : "drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]";
+    ? "drop-shadow-[0_0_10px_rgba(225,85,37,0.6)]"
+    : "drop-shadow-[0_0_10px_rgba(255,255,255,0.25)]";
 
   const displayHealth = Math.max(0, player.health);
 
   return (
-    <div className="flex flex-col items-start gap-1.5 p-3 xl:p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-lg select-none min-w-[140px] xl:min-w-[160px]">
+    <div
+      className={`flex flex-col items-start gap-1.5 p-3 xl:p-4 bg-[#0d1316]/90 backdrop-blur-md rounded-2xl border border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.8)] select-none min-w-[140px] xl:min-w-[160px] ${smoothTransition} hover:scale-105 hover:border-white/10`}
+    >
       <div className="flex items-center gap-2 xl:gap-3">
-        <div className="w-8 h-8 xl:w-10 xl:h-10 rounded-full bg-gray-700 border-2 border-white/20 shrink-0" />
+        <div className="w-8 h-8 xl:w-10 xl:h-10 rounded-full bg-[#1c2226] border border-white/10 shrink-0 shadow-inner relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
         <div>
           <span
             className={`text-[9px] xl:text-[10px] uppercase tracking-[0.2em] font-bold ${labelColor} drop-shadow-md block`}
@@ -42,9 +50,10 @@ const PlayerStatusWidget = ({ player, type }) => {
         </div>
       </div>
       <div
-        className={`text-2xl xl:text-3xl font-black ${hpColor} ${hpShadow} w-full text-center mt-1`}
+        className={`text-2xl xl:text-3xl font-black ${hpColor} ${hpShadow} w-full text-center mt-1 transition-all duration-300`}
       >
-        {displayHealth} <span className="text-xs xl:text-sm font-bold">HP</span>
+        {displayHealth}{" "}
+        <span className="text-xs xl:text-sm font-bold opacity-80">HP</span>
       </div>
     </div>
   );
@@ -55,11 +64,51 @@ const GameBoard = () => {
     roundNumber: 1,
     colorRanking: [0, 1, 2, 3],
     zones: [
-      { zoneIndex: 1, humanTokens: 4, vampireTokens: 0 },
-      { zoneIndex: 2, humanTokens: 3, vampireTokens: 1 },
-      { zoneIndex: 3, humanTokens: 4, vampireTokens: 0 },
-      { zoneIndex: 4, humanTokens: 2, vampireTokens: 2 },
-      { zoneIndex: 5, humanTokens: 4, vampireTokens: 0 },
+      {
+        zoneIndex: 1,
+        tokens: [
+          { id: 1, status: "human" },
+          { id: 2, status: "vampire" },
+          { id: 3, status: "human" },
+          { id: 4, status: "vampire" },
+        ],
+      },
+      {
+        zoneIndex: 2,
+        tokens: [
+          { id: 5, status: "human" },
+          { id: 6, status: "human" },
+          { id: 7, status: "human" },
+          { id: 8, status: "human" },
+        ],
+      },
+      {
+        zoneIndex: 3,
+        tokens: [
+          { id: 9, status: "human" },
+          { id: 10, status: "vampire" },
+          { id: 11, status: "human" },
+          { id: 12, status: "human" },
+        ],
+      },
+      {
+        zoneIndex: 4,
+        tokens: [
+          { id: 13, status: "human" },
+          { id: 14, status: "human" },
+          { id: 15, status: "human" },
+          { id: 16, status: "human" },
+        ],
+      },
+      {
+        zoneIndex: 5,
+        tokens: [
+          { id: 17, status: "human" },
+          { id: 18, status: "human" },
+          { id: 19, status: "human" },
+          { id: 20, status: "human" },
+        ],
+      },
     ],
     players: [
       {
@@ -119,10 +168,6 @@ const GameBoard = () => {
     setDraggedItemIndex(null);
   };
   const handleDragOver = (e) => e.preventDefault();
-  const getTokenPosition = (district, index) => {
-    if (!district?.slots?.length) return { x: 0.5, y: 0.5 };
-    return district.slots[index] || district.slots[district.slots.length - 1];
-  };
 
   const renderColorRanking = () => {
     const tokenImages = {
@@ -132,7 +177,7 @@ const GameBoard = () => {
       3: crossToken,
     };
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-6 px-3 xl:py-8 xl:px-4 bg-black/40 backdrop-blur-md rounded-full border border-white/5 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+      <div className="flex flex-col items-center justify-center gap-4 py-6 px-3 xl:py-8 xl:px-4 bg-[#0d1316]/80 backdrop-blur-md rounded-full border border-white/5 shadow-[-10px_0_40px_rgba(0,0,0,0.9)]">
         {ranking.map((colorKey, index) => (
           <React.Fragment key={colorKey}>
             <div
@@ -141,21 +186,28 @@ const GameBoard = () => {
               onDragEnter={(e) => handleDragEnter(e, index)}
               onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
-              className={`w-14 h-14 xl:w-16 xl:h-16 rounded-full overflow-hidden border border-white/20 shadow-[0_5px_15px_rgba(0,0,0,0.8)] transition-transform cursor-grab active:cursor-grabbing flex items-center justify-center p-2.5 ${draggedItemIndex === index ? "opacity-50 scale-95 border-game-dracula-orange border-2" : "hover:scale-110 bg-white/5"}`}
+              className={`w-20 h-20 xl:w-28 xl:h-28 rounded-full overflow-hidden border transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu cursor-grab active:cursor-grabbing flex items-center justify-center p-2.5 
+              ${
+                draggedItemIndex === index
+                  ? "opacity-60 scale-90 border-game-dracula-orange border-2 shadow-[0_0_20px_rgba(225,85,37,0.5)] bg-black/60 rotate-3"
+                  : "border-white/10 hover:scale-110 hover:border-white/30 bg-[#161d22] shadow-[0_8px_20px_rgba(0,0,0,0.8)] hover:shadow-[0_12px_25px_rgba(0,0,0,1)]"
+              }`}
             >
               <img
                 src={tokenImages[colorKey]}
                 alt=""
-                className="w-full h-full object-contain pointer-events-none"
+                className={`w-full h-full object-contain pointer-events-none ${smoothTransition} ${draggedItemIndex !== index && "hover:scale-110"}`}
               />
             </div>
             {index < 3 && (
-              <div className="text-white/30 shrink-0">
+              <div
+                className={`text-white/20 shrink-0 transition-opacity duration-300 ${draggedItemIndex !== null ? "opacity-0" : "opacity-100"}`}
+              >
                 <svg
                   width="20"
                   height="12"
                   viewBox="0 0 24 16"
-                  className="w-5 h-3 xl:w-6 xl:h-4"
+                  className="w-5 h-3 xl:w-6 xl:h-4 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"
                 >
                   <polyline
                     points="4,4 12,12 20,4"
@@ -173,13 +225,15 @@ const GameBoard = () => {
   };
 
   return (
-    <div className="fixed inset-0 pt-24 pb-8 w-full h-full bg-game-dark-teal flex items-center justify-center font-['Inter'] px-8 select-none overflow-y-auto box-border">
+    <div className="fixed inset-0 pt-24 pb-8 w-full h-full bg-[#0a0f12] flex items-center justify-center font-['Inter'] px-8 select-none overflow-y-auto box-border perspective-1000">
       <div className="w-full max-w-[1600px] flex flex-row items-center justify-center gap-8 xl:gap-12 h-full max-h-[900px]">
         {/* LEFT COLUMN */}
-        <div className="flex flex-col items-center justify-center gap-4 xl:gap-6 flex-1 max-w-[900px]">
+        <div className="flex flex-col items-center justify-center gap-4 xl:gap-8 flex-1 max-w-[900px]">
           {/* OPPONENT ROW */}
-          <div className="relative w-full flex justify-between items-center">
-            <div className="absolute top-1/2 -translate-y-1/2 right-[100%] mr-6 xl:mr-10 z-20">
+          <div className="relative w-full flex justify-between items-center group/opponent">
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 right-[100%] mr-6 xl:mr-10 z-20 ${smoothTransition}`}
+            >
               <PlayerStatusWidget player={opponent} type="opponent" />
             </div>
 
@@ -188,10 +242,14 @@ const GameBoard = () => {
               const isHovered = hoveredDistrict === districtId;
               const isOthersHovered =
                 hoveredDistrict !== null && hoveredDistrict !== districtId;
+
               return (
                 <div
                   key={i}
-                  className={`w-28 xl:w-36 aspect-[2/3] shrink-0 transition-all duration-300 ease-in-out ${isOthersHovered ? "opacity-50 brightness-75 scale-95" : ""} ${isHovered ? "scale-105 z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" : "z-0"} `}
+                  className={`w-28 xl:w-36 aspect-[2/3] shrink-0 ${smoothTransition}
+                    ${isOthersHovered ? "opacity-30 blur-[2px] scale-95" : "opacity-100"} 
+                    ${isHovered ? "scale-110 translate-y-4 z-20 drop-shadow-[0_15px_30px_rgba(0,0,0,1)]" : "z-0 drop-shadow-[0_5px_15px_rgba(0,0,0,0.6)]"} 
+                  `}
                   onMouseEnter={() => setHoveredDistrict(districtId)}
                   onMouseLeave={() => setHoveredDistrict(null)}
                 >
@@ -202,7 +260,9 @@ const GameBoard = () => {
           </div>
 
           {/* BOARD CONTAINER */}
-          <div className="w-full relative shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden border border-white/5 bg-black">
+          <div
+            className={`w-full relative shadow-[0_20px_80px_rgba(0,0,0,0.9)] rounded-xl overflow-hidden border border-[#232a30] bg-[#05080a] ${smoothTransition}`}
+          >
             <div
               style={{ aspectRatio: "1536 / 1024" }}
               className="w-full relative"
@@ -213,36 +273,8 @@ const GameBoard = () => {
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
 
-              <div className="absolute inset-0 z-10 pointer-events-none">
-                {mockGameState.zones.map((zone) => {
-                  const district = districts.find(
-                    (d) => d.id === zone.zoneIndex,
-                  );
-                  if (!district) return null;
-                  const humans = Array(zone.humanTokens).fill("human");
-                  const vampires = Array(zone.vampireTokens).fill("vampire");
-                  const tokens = [...humans, ...vampires];
-                  return tokens.map((type, i) => {
-                    const pos = getTokenPosition(district, i);
-                    return (
-                      <div
-                        key={`${zone.zoneIndex}-${i}`}
-                        // Tăng w-[4.5%] lên w-[6.5%] để token to hơn
-                        className="absolute w-[6.5%] aspect-square"
-                        style={{
-                          left: `${pos.x * 100}%`,
-                          top: `${pos.y * 100}%`,
-                          transform: "translate(-50%, -50%)",
-                        }}
-                      >
-                        <div
-                          className={`w-full h-full rounded-full border-[3px] shadow-lg ${type === "human" ? "bg-[#d2c4b3] border-white" : "bg-[#9a1b1f] border-[#e15525] shadow-[0_0_15px_rgba(225,85,37,0.9)]"}`}
-                        />
-                      </div>
-                    );
-                  });
-                })}
-              </div>
+              <MapTokens zones={mockGameState.zones} />
+
               <svg
                 className="absolute inset-0 w-full h-full z-20 pointer-events-none"
                 viewBox="0 0 1536 1024"
@@ -258,13 +290,15 @@ const GameBoard = () => {
                       points={district.rawPolygon
                         .map((p) => p.join(","))
                         .join(" ")}
-                      className="pointer-events-auto cursor-pointer transition-all duration-300 ease-in-out"
+                      className="pointer-events-auto cursor-pointer transition-colors duration-500 ease-in-out"
                       style={{
                         fill: isOthersHovered
-                          ? "rgba(0, 0, 0, 0.6)"
+                          ? "rgba(0, 0, 0, 0.75)"
                           : isHovered
-                            ? "rgba(255, 255, 255, 0.1)"
+                            ? "rgba(255, 255, 255, 0.15)"
                             : "transparent",
+                        stroke: "transparent",
+                        strokeWidth: "0",
                       }}
                       onMouseEnter={() => setHoveredDistrict(district.id)}
                       onMouseLeave={() => setHoveredDistrict(null)}
@@ -276,8 +310,10 @@ const GameBoard = () => {
           </div>
 
           {/* MY PLAYER ROW */}
-          <div className="relative w-full flex justify-between items-center">
-            <div className="absolute top-1/2 -translate-y-1/2 right-[100%] mr-6 xl:mr-10 z-20">
+          <div className="relative w-full flex justify-between items-center group/player">
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 right-[100%] mr-6 xl:mr-10 z-20 ${smoothTransition}`}
+            >
               <PlayerStatusWidget player={myPlayer} type="self" />
             </div>
 
@@ -286,10 +322,14 @@ const GameBoard = () => {
               const isHovered = hoveredDistrict === districtId;
               const isOthersHovered =
                 hoveredDistrict !== null && hoveredDistrict !== districtId;
+
               return (
                 <div
                   key={i}
-                  className={`w-28 xl:w-36 aspect-[2/3] shrink-0 transition-all duration-300 ease-in-out cursor-pointer ${isOthersHovered ? "opacity-50 brightness-75 scale-95" : ""} ${isHovered ? "scale-105 z-10 drop-shadow-[0_0_20px_rgba(225,85,37,0.5)]" : "z-0"} `}
+                  className={`w-28 xl:w-36 aspect-[2/3] shrink-0 cursor-pointer origin-bottom ${smoothTransition}
+                    ${isOthersHovered ? "opacity-40 blur-[1px] scale-95" : "opacity-100"} 
+                    ${isHovered ? "scale-110 -translate-y-6 z-20 drop-shadow-[0_0_30px_rgba(225,85,37,0.5)]" : "z-0 drop-shadow-[0_8px_20px_rgba(0,0,0,0.8)]"} 
+                  `}
                   onMouseEnter={() => setHoveredDistrict(districtId)}
                   onMouseLeave={() => setHoveredDistrict(null)}
                 >

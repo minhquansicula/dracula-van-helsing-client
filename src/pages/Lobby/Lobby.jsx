@@ -1,17 +1,52 @@
+// src/pages/Lobby/Lobby.jsx
+
 import React, { useState, useContext, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
 import { ROUTES } from "../../constants/routes";
+import useGameStore from "../../store/useGameStore";
 
 const Lobby = () => {
   const [code, setCode] = useState(new Array(6).fill(""));
   const [isLoading, setIsLoading] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { user, logout } = useContext(AuthContext);
+  const { connect, createRoom, joinRoom, roomCode, error, clearError } =
+    useGameStore();
   const navigate = useNavigate();
 
   const inputRefs = useRef([]);
+
+  // 1. KẾT NỐI SIGNALR KHI VÀO SẢNH
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (user && token) {
+      connect(token);
+    }
+  }, [user, connect]);
+
+  // 2. LẮNG NGHE KHI BACKEND TRẢ VỀ ROOM CODE (TẠO/VÀO PHÒNG THÀNH CÔNG)
+  useEffect(() => {
+    if (roomCode) {
+      setIsLoading(false);
+      setIsTransitioning(true); // Bật hiệu ứng mờ dần
+      setTimeout(() => {
+        navigate(ROUTES.GAME_ROOM.replace(":roomCode", roomCode));
+      }, 700); // Chuyển trang sau khi hiệu ứng mờ kết thúc
+    }
+  }, [roomCode, navigate]);
+
+  // 3. LẮNG NGHE LỖI TỪ BACKEND (SAI CODE, PHÒNG ĐẦY...)
+  useEffect(() => {
+    if (error) {
+      setIsLoading(false);
+      alert(error); // Bạn có thể thay cái này bằng một Toast/Modal UI đẹp hơn sau
+      clearError();
+      setCode(new Array(6).fill("")); // Xóa trắng ô nhập
+      if (inputRefs.current[0]) inputRefs.current[0].focus(); // Đưa con trỏ về ô đầu tiên
+    }
+  }, [error, clearError]);
 
   const handleProtectedAction = (action) => {
     if (!user) {
@@ -45,20 +80,16 @@ const Lobby = () => {
     }
   };
 
-  const handleAutoJoin = (finalCode) => {
+  // GỌI HÀM VÀO PHÒNG TỪ BACKEND
+  const handleAutoJoin = async (finalCode) => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate(ROUTES.GAME_ROOM.replace(":roomCode", finalCode));
-    }, 1200);
+    await joinRoom(finalCode);
   };
 
-  const onCreateRoom = () => {
+  // GỌI HÀM TẠO PHÒNG TỪ BACKEND
+  const onCreateRoom = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate(ROUTES.GAME_ROOM.replace(":roomCode", "DEMO99"));
-    }, 1000);
+    await createRoom();
   };
 
   return (
@@ -141,7 +172,7 @@ const Lobby = () => {
                 <button
                   onClick={() => handleProtectedAction(onCreateRoom)}
                   disabled={isLoading}
-                  className="w-full h-full flex items-center justify-center border border-white/10 bg-black/40 text-game-bone-white/60 hover:text-game-dracula-orange hover:border-game-dracula-orange hover:bg-white/[0.02] transition-all duration-500 uppercase tracking-[0.3em] font-bold font-['Playfair_Display'] text-xs shadow-none"
+                  className="w-full h-full flex items-center justify-center border border-white/10 bg-black/40 text-game-bone-white/60 hover:text-game-dracula-orange hover:border-game-dracula-orange hover:bg-white/[0.02] transition-all duration-500 uppercase tracking-[0.3em] font-bold font-['Playfair_Display'] text-xs shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading
                     ? "Đang tạo..."
@@ -179,7 +210,7 @@ const Lobby = () => {
                       value={data}
                       onChange={(e) => handleChange(e.target, index)}
                       onKeyDown={(e) => handleKeyDown(e, index)}
-                      className="w-10 md:w-12 h-full bg-black/40 border border-white/10 text-game-dracula-orange text-2xl font-black text-center focus:border-game-dracula-orange focus:outline-none transition-all duration-300 rounded-none font-['Playfair_Display']"
+                      className="w-10 md:w-12 h-full bg-black/40 border border-white/10 text-game-dracula-orange text-2xl font-black text-center focus:border-game-dracula-orange focus:outline-none transition-all duration-300 rounded-none font-['Playfair_Display'] disabled:opacity-50"
                       disabled={isLoading}
                     />
                   ))}
