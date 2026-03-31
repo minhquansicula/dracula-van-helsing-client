@@ -35,6 +35,11 @@ const useGameStore = create((set, get) => ({
       set({ gameState: state, error: null });
     });
 
+    // Lắng nghe sự kiện kết thúc game (Đầu hàng, Thắng/Thua thông thường)
+    newConnection.on("GameEnded", (state) => {
+      set({ gameState: state });
+    });
+
     newConnection.on("Error", (message) => {
       set({ error: message });
     });
@@ -66,6 +71,13 @@ const useGameStore = create((set, get) => ({
     const { connection } = get();
     if (connection) {
       await connection.invoke("SelectRole", code, requestedFaction);
+    }
+  },
+
+  surrender: async (code) => {
+    const { connection } = get();
+    if (connection) {
+      await connection.invoke("Surrender", code);
     }
   },
 

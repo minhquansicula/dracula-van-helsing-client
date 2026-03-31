@@ -1,22 +1,20 @@
-// src/pages/Lobby/Lobby.jsx
-
 import React, { useState, useContext, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
-import Button from "../../components/ui/Button";
 import { ROUTES } from "../../constants/routes";
 import useGameStore from "../../store/useGameStore";
+import RoomCodeInput from "../../components/ui/RoomCodeInput";
 
 const Lobby = () => {
-  const [code, setCode] = useState(new Array(6).fill(""));
   const [isLoading, setIsLoading] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
   const { user, logout } = useContext(AuthContext);
   const { connect, createRoom, joinRoom, roomCode, error, clearError } =
     useGameStore();
   const navigate = useNavigate();
 
-  const inputRefs = useRef([]);
+  const roomCodeInputRef = useRef(null);
 
   // 1. KẾT NỐI SIGNALR KHI VÀO SẢNH
   useEffect(() => {
@@ -43,8 +41,11 @@ const Lobby = () => {
       setIsLoading(false);
       alert(error); // Bạn có thể thay cái này bằng một Toast/Modal UI đẹp hơn sau
       clearError();
-      setCode(new Array(6).fill("")); // Xóa trắng ô nhập
-      if (inputRefs.current[0]) inputRefs.current[0].focus(); // Đưa con trỏ về ô đầu tiên
+
+      // Xóa trắng ô nhập bằng ref thay vì state
+      if (roomCodeInputRef.current) {
+        roomCodeInputRef.current.clear();
+      }
     }
   }, [error, clearError]);
 
@@ -55,29 +56,6 @@ const Lobby = () => {
       return;
     }
     action();
-  };
-
-  const handleChange = (element, index) => {
-    const value = element.value.toUpperCase();
-    if (/[^A-Z0-9]/.test(value)) return;
-
-    const newCode = [...code];
-    newCode[index] = value;
-    setCode(newCode);
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1].focus();
-    }
-
-    if (newCode.every((char) => char !== "") && newCode.length === 6) {
-      handleAutoJoin(newCode.join(""));
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
   };
 
   // GỌI HÀM VÀO PHÒNG TỪ BACKEND
@@ -154,7 +132,6 @@ const Lobby = () => {
           >
             {/* CỘT 1: TRIỆU HỒI */}
             <div className="bg-game-dark-teal p-10 md:p-14 lg:p-16 flex flex-col items-center text-center group border-r border-white/5 h-full">
-              {/* Vùng nội dung chữ (Tự động giãn ra để đẩy nút xuống đáy) */}
               <div className="flex-grow flex flex-col items-center justify-start">
                 <div className="h-24 flex items-end mb-10">
                   <div className="w-px bg-game-dracula-orange opacity-40 group-hover:h-24 h-16 transition-all duration-500" />
@@ -167,7 +144,6 @@ const Lobby = () => {
                 </p>
               </div>
 
-              {/* Vùng Nút bấm: Cố định chiều cao bằng với ô nhập mã (h-14 md:h-16) */}
               <div className="w-full mt-auto h-14 md:h-16">
                 <button
                   onClick={() => handleProtectedAction(onCreateRoom)}
@@ -186,7 +162,6 @@ const Lobby = () => {
             {/* CỘT 2: GIA NHẬP */}
             {user && (
               <div className="bg-game-dark-teal p-10 md:p-14 lg:p-16 flex flex-col items-center text-center group relative animate-in fade-in slide-in-from-right-10 duration-700 h-full">
-                {/* Vùng nội dung chữ */}
                 <div className="flex-grow flex flex-col items-center justify-start">
                   <div className="h-24 flex items-end mb-10">
                     <div className="w-px bg-game-vanhelsing-blood opacity-40 group-hover:h-24 h-16 transition-all duration-500" />
@@ -199,24 +174,13 @@ const Lobby = () => {
                   </p>
                 </div>
 
-                {/* Vùng Ô nhập mã: Cố định chiều cao (h-14 md:h-16) ngang hàng nút Khởi tạo */}
-                <div className="w-full mt-auto flex justify-center gap-2 h-14 md:h-16">
-                  {code.map((data, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      maxLength="1"
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      value={data}
-                      onChange={(e) => handleChange(e.target, index)}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      className="w-10 md:w-12 h-full bg-black/40 border border-white/10 text-game-dracula-orange text-2xl font-black text-center focus:border-game-dracula-orange focus:outline-none transition-all duration-300 rounded-none font-['Playfair_Display'] disabled:opacity-50"
-                      disabled={isLoading}
-                    />
-                  ))}
-                </div>
+                {/* Tái sử dụng Component nhập mã PIN */}
+                <RoomCodeInput
+                  ref={roomCodeInputRef}
+                  disabled={isLoading}
+                  onComplete={handleAutoJoin}
+                />
 
-                {/* Text loading đặt ở absolute để không phá vỡ layout */}
                 {isLoading && (
                   <p className="absolute bottom-6 left-0 right-0 text-[10px] uppercase tracking-[0.4em] text-game-dracula-orange animate-pulse mt-4">
                     Đang kiểm tra hiệp ước...
