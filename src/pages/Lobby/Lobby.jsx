@@ -1,53 +1,63 @@
-import React, { useState, useContext, useRef, useEffect } from "react";
+// src/pages/Lobby/Lobby.jsx
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { ROUTES } from "../../constants/routes";
 import useGameStore from "../../store/useGameStore";
 import RoomCodeInput from "../../components/ui/RoomCodeInput";
-import { preloadGameAssets } from "../../utils/assetLoader";
+import RulebookModal from "../../components/game/RulebookModal";
 
 const Lobby = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isRulebookOpen, setIsRulebookOpen] = useState(false);
 
   const { user, logout } = useContext(AuthContext);
-  const { connect, createRoom, joinRoom, roomCode, error, clearError } =
-    useGameStore();
+  const {
+    connect,
+    checkActiveMatch,
+    createRoom,
+    joinRoom,
+    roomCode,
+    error,
+    clearError,
+  } = useGameStore();
   const navigate = useNavigate();
-
   const roomCodeInputRef = useRef(null);
 
-  // 1. KẾT NỐI SIGNALR KHI VÀO SẢNH
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (user && token) {
-      connect(token);
-    }
-  }, [user, connect]);
+    const initConnection = async () => {
+      const token = localStorage.getItem("token");
+      if (user && token && !roomCode) {
+        setIsLoading(true); // Hiển thị đang tải để tránh nháy giật
+        await connect(token);
 
-  useEffect(() => {
-    preloadGameAssets();
-  }, []);
+        // Sau khi connect xong, check xem có đang kẹt trong ván nào không
+        const activeCode = await checkActiveMatch();
+        if (!activeCode) {
+          setIsLoading(false); // Nếu không kẹt, nhả loading ra để chơi bình thường
+        }
+      }
+    };
+    initConnection();
+  }, [user, connect, roomCode, checkActiveMatch]);
 
-  // 2. LẮNG NGHE KHI BACKEND TRẢ VỀ ROOM CODE (TẠO/VÀO PHÒNG THÀNH CÔNG)
   useEffect(() => {
     if (roomCode) {
       setIsLoading(false);
-      setIsTransitioning(true); // Bật hiệu ứng mờ dần
+      setIsTransitioning(true);
       setTimeout(() => {
         navigate(ROUTES.GAME_ROOM.replace(":roomCode", roomCode));
-      }, 700); // Chuyển trang sau khi hiệu ứng mờ kết thúc
+      }, 700);
     }
   }, [roomCode, navigate]);
 
-  // 3. LẮNG NGHE LỖI TỪ BACKEND (SAI CODE, PHÒNG ĐẦY...)
   useEffect(() => {
     if (error) {
       setIsLoading(false);
-      alert(error); // Bạn có thể thay cái này bằng một Toast/Modal UI đẹp hơn sau
+      alert(error);
       clearError();
 
-      // Xóa trắng ô nhập bằng ref thay vì state
       if (roomCodeInputRef.current) {
         roomCodeInputRef.current.clear();
       }
@@ -63,13 +73,11 @@ const Lobby = () => {
     action();
   };
 
-  // GỌI HÀM VÀO PHÒNG TỪ BACKEND
   const handleAutoJoin = async (finalCode) => {
     setIsLoading(true);
     await joinRoom(finalCode);
   };
 
-  // GỌI HÀM TẠO PHÒNG TỪ BACKEND
   const onCreateRoom = async () => {
     setIsLoading(true);
     await createRoom();
@@ -94,7 +102,29 @@ const Lobby = () => {
             </h2>
           </div>
 
-          <nav className="flex items-center gap-8">
+          <nav className="flex items-center gap-6 xl:gap-8">
+            <button
+              onClick={() => setIsRulebookOpen(true)}
+              className="flex items-center gap-2 text-[10px] xl:text-[11px] uppercase tracking-[0.3em] font-bold text-white/40 hover:text-game-dracula-orange transition-colors"
+            >
+              <svg
+                className="w-4 h-4 xl:w-5 xl:h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
+              <span className="hidden sm:inline">Sách Luật</span>
+            </button>
+
+            <div className="w-px h-4 bg-white/10 hidden sm:block"></div>
+
             {user ? (
               <div className="flex items-center gap-6">
                 <div className="text-right hidden sm:block">
@@ -113,7 +143,7 @@ const Lobby = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex gap-8 items-center">
+              <div className="flex gap-6 xl:gap-8 items-center">
                 <Link
                   to={ROUTES.LOGIN}
                   className="text-[11px] uppercase tracking-[0.3em] font-bold hover:text-game-dracula-orange"
@@ -135,7 +165,6 @@ const Lobby = () => {
           <div
             className={`w-full transition-all duration-700 ease-in-out ${user ? "max-w-5xl grid md:grid-cols-2" : "max-w-md grid-cols-1"} bg-white/[0.02] border border-white/5 shadow-2xl items-stretch`}
           >
-            {/* CỘT 1: TRIỆU HỒI */}
             <div className="bg-game-dark-teal p-10 md:p-14 lg:p-16 flex flex-col items-center text-center group border-r border-white/5 h-full">
               <div className="flex-grow flex flex-col items-center justify-start">
                 <div className="h-24 flex items-end mb-10">
@@ -164,7 +193,6 @@ const Lobby = () => {
               </div>
             </div>
 
-            {/* CỘT 2: GIA NHẬP */}
             {user && (
               <div className="bg-game-dark-teal p-10 md:p-14 lg:p-16 flex flex-col items-center text-center group relative animate-in fade-in slide-in-from-right-10 duration-700 h-full">
                 <div className="flex-grow flex flex-col items-center justify-start">
@@ -179,7 +207,6 @@ const Lobby = () => {
                   </p>
                 </div>
 
-                {/* Tái sử dụng Component nhập mã PIN */}
                 <RoomCodeInput
                   ref={roomCodeInputRef}
                   disabled={isLoading}
@@ -202,6 +229,11 @@ const Lobby = () => {
           <div className="h-[1px] w-12 bg-white" />
         </footer>
       </div>
+
+      <RulebookModal
+        isOpen={isRulebookOpen}
+        onClose={() => setIsRulebookOpen(false)}
+      />
     </>
   );
 };

@@ -49,6 +49,15 @@ class SignalRService {
   }
 
   // --- CÁC HÀM GỬI LỆNH XUỐNG BACKEND ---
+
+  // HÀM MỚI: Kiểm tra trận đấu cũ
+  async checkCurrentActiveMatch() {
+    if (this.connection) {
+      return await this.connection.invoke("CheckCurrentActiveMatch");
+    }
+    return null;
+  }
+
   async createRoom() {
     return this.connection?.invoke("CreateRoom");
   }
@@ -71,6 +80,15 @@ class SignalRService {
 
   async submitSkillAction(code, payload) {
     return this.connection?.invoke("SubmitSkillAction", code, payload);
+  }
+
+  async leaveRoom() {
+    return this.connection?.invoke("LeaveRoom");
+  }
+
+  // HÀM MỚI: Gọi kết thúc vòng
+  async callEndRound(code) {
+    return this.connection?.invoke("CallEndRound", code);
   }
 
   async surrender(code) {

@@ -55,6 +55,12 @@ const GameBoard = () => {
       ? gameState.discardPile[gameState.discardPile.length - 1]
       : null;
 
+  // TRUYỀN DATA LÁ SỐ 2 VÀO DECK
+  const topDeckCardId =
+    gameState.isTopDeckCardRevealed && gameState.drawPile.length > 0
+      ? gameState.drawPile[0]
+      : null;
+
   const handleDrawCard = async () => {
     if (isMyTurn && !hasDrawnCard && !pendingSkill) {
       await drawCard(roomCode);
@@ -74,7 +80,16 @@ const GameBoard = () => {
   };
 
   const handleTargetOwnCard = async (targetCardId) => {
+    // Lấy thông tin lá bài mà người chơi vừa click
+    const targetCard = myPlayer?.hand?.find((c) => c.cardId === targetCardId);
+
     if (isTargetingOwnCardSingle) {
+      // LOGIC MỚI: Chặn click nếu lá bài đã lật
+      if (targetCard && targetCard.isRevealed) {
+        alert("Lá bài này đã lộ diện rồi! Hãy chọn một lá đang úp nhé.");
+        return; // Dừng hàm lại, không gửi request lên Server
+      }
+
       await submitSkillAction(roomCode, { targetCardId: targetCardId });
     } else if (isTargetingOwnCardDouble) {
       let newSelected = [...selectedOwnCards];
@@ -107,7 +122,7 @@ const GameBoard = () => {
   };
 
   return (
-    <div className="fixed inset-0 pt-24 pb-8 w-full h-full bg-[#0a0f12] flex items-center justify-center font-['Inter'] px-8 select-none overflow-y-auto box-border perspective-1000">
+    <div className="fixed inset-0 pt-24 pb-8 w-full h-full bg-[#0a0f12] flex items-center justify-center font-['Inter'] px-8 select-none overflow-hidden box-border perspective-1000">
       {/* BANNER THÔNG BÁO KỸ NĂNG 3, 6 (Chọn 1 bài đối thủ) */}
       {isTargetingOpponentCard && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
@@ -211,6 +226,7 @@ const GameBoard = () => {
                 ? { cardId: topDiscardCardId, isRevealed: true }
                 : null
             }
+            topDeckCardId={topDeckCardId}
             onDraw={handleDrawCard}
             isMyTurn={isMyTurn}
             hasDrawnCard={hasDrawnCard}

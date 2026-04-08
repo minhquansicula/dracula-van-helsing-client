@@ -12,7 +12,6 @@ const useGameStore = create((set, get) => ({
     if (get().isConnected) return;
 
     try {
-      // Truyền các hàm cập nhật state (callbacks) vào service
       await signalrService.connect(token, {
         onRoomCreated: (roomCode) => set({ roomCode: roomCode, error: null }),
         onRoomReadyToSelectRole: (state) =>
@@ -29,6 +28,19 @@ const useGameStore = create((set, get) => ({
     } catch (err) {
       set({ error: "Không thể kết nối đến máy chủ trò chơi." });
     }
+  },
+
+  checkActiveMatch: async () => {
+    try {
+      const activeRoomCode = await signalrService.checkCurrentActiveMatch();
+      if (activeRoomCode) {
+        set({ roomCode: activeRoomCode });
+        return activeRoomCode;
+      }
+    } catch (err) {
+      console.error("Lỗi khi kiểm tra trận đấu cũ: ", err);
+    }
+    return null;
   },
 
   disconnect: async () => {
@@ -49,6 +61,15 @@ const useGameStore = create((set, get) => ({
       await signalrService.joinRoom(code);
     } catch (error) {
       set({ error: "Không thể vào phòng." });
+    }
+  },
+
+  leaveRoom: async () => {
+    try {
+      await signalrService.leaveRoom();
+      set({ roomCode: null, gameState: null, error: null });
+    } catch (error) {
+      console.error("Lỗi khi rời phòng:", error);
     }
   },
 
@@ -81,6 +102,14 @@ const useGameStore = create((set, get) => ({
       await signalrService.submitSkillAction(code, payload);
     } catch (error) {
       set({ error: "Lỗi khi dùng kỹ năng." });
+    }
+  },
+
+  callEndRound: async (code) => {
+    try {
+      await signalrService.callEndRound(code);
+    } catch (error) {
+      set({ error: "Lỗi khi gọi kết thúc vòng." });
     }
   },
 

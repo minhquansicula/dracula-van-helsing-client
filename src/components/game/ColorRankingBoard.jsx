@@ -6,12 +6,10 @@ const smoothTransition =
 
 const ColorRankingBoard = ({
   initialRanking,
-  onRankingChange,
   isTargeting = false,
   onTargetColorsSubmit,
 }) => {
   const [ranking, setRanking] = useState(initialRanking || [0, 1, 2, 3]);
-  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
   // State lưu 2 màu đang được click chọn (dành cho Kỹ năng 7)
   const [selectedColors, setSelectedColors] = useState([]);
@@ -20,6 +18,7 @@ const ColorRankingBoard = ({
     ? import.meta.env.BASE_URL
     : process.env.PUBLIC_URL || "";
 
+  // Cập nhật lại ranking khi Backend gửi dữ liệu mới (do đổi bài số 7 hoặc reset game)
   useEffect(() => {
     if (initialRanking) setRanking(initialRanking);
   }, [initialRanking]);
@@ -29,33 +28,7 @@ const ColorRankingBoard = ({
     if (!isTargeting) setSelectedColors([]);
   }, [isTargeting]);
 
-  const handleDragStart = (e, index) => {
-    if (isTargeting) {
-      e.preventDefault();
-      return;
-    }
-    setDraggedItemIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragEnter = (e, targetIndex) => {
-    if (isTargeting || draggedItemIndex === null) return;
-    if (draggedItemIndex !== targetIndex) {
-      const newRanking = [...ranking];
-      const item = newRanking[draggedItemIndex];
-      newRanking.splice(draggedItemIndex, 1);
-      newRanking.splice(targetIndex, 0, item);
-
-      setRanking(newRanking);
-      setDraggedItemIndex(targetIndex);
-      if (onRankingChange) onRankingChange(newRanking);
-    }
-  };
-
-  const handleDragEnd = () => setDraggedItemIndex(null);
-  const handleDragOver = (e) => e.preventDefault();
-
-  // Xử lý Click chọn màu khi dùng lá số 7
+  // Xử lý Click chọn màu (Chỉ có tác dụng khi dùng lá số 7)
   const handleColorClick = (colorKey) => {
     if (!isTargeting) return;
 
@@ -88,16 +61,10 @@ const ColorRankingBoard = ({
         return (
           <React.Fragment key={colorKey}>
             <div
-              draggable={!isTargeting}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragEnter={(e) => handleDragEnter(e, index)}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
               onClick={() => handleColorClick(colorKey)}
               className={`w-14 h-14 xl:w-20 xl:h-20 rounded-full overflow-hidden border transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu p-0 flex items-center justify-center
-                ${isTargeting ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
-                ${draggedItemIndex === index ? "opacity-60 scale-90 border-game-dracula-orange border-2 shadow-[0_0_20px_rgba(225,85,37,0.5)] rotate-3" : ""}
-                ${isSelected ? "border-game-dracula-orange border-4 scale-110 shadow-[0_0_25px_rgba(225,85,37,0.8)] z-10 brightness-125" : "border-transparent hover:scale-105"}
+                ${isTargeting ? "cursor-pointer hover:scale-110" : "cursor-default"}
+                ${isSelected ? "border-game-dracula-orange border-4 scale-110 shadow-[0_0_25px_rgba(225,85,37,0.8)] z-10 brightness-125" : "border-transparent"}
                 ${isTargeting && !isSelected && selectedColors.length > 0 ? "opacity-50 grayscale-[50%]" : ""}
               `}
             >
@@ -120,9 +87,7 @@ const ColorRankingBoard = ({
             </div>
 
             {index < 3 && (
-              <div
-                className={`text-white/20 shrink-0 transition-opacity duration-300 ${draggedItemIndex !== null ? "opacity-0" : "opacity-100"}`}
-              >
+              <div className="text-white/20 shrink-0 transition-opacity duration-300">
                 <svg
                   width="16"
                   height="10"
