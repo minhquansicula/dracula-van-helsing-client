@@ -14,17 +14,20 @@ import useGameStore from "../../store/useGameStore";
 const smoothTransition =
   "transition-[transform,opacity,filter,box-shadow] duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] transform-gpu";
 
-const GameBoard = () => {
+const GameBoard = ({
+  displayState,
+  activeCombatDistrict,
+  isAnimatingCombat,
+}) => {
   const { roomCode } = useParams();
   const { user } = useContext(AuthContext);
-  const { gameState, drawCard, playCard, submitSkillAction } = useGameStore();
+  const { drawCard, playCard, submitSkillAction } = useGameStore();
 
   const [hoveredDistrict, setHoveredDistrict] = useState(null);
-
-  // State lưu trữ các lá bài của bản thân được chọn (Dành cho kỹ năng 4)
   const [selectedOwnCards, setSelectedOwnCards] = useState([]);
 
-  // Reset selection khi pendingSkillValue thay đổi
+  const gameState = displayState;
+
   useEffect(() => {
     setSelectedOwnCards([]);
   }, [gameState?.pendingSkillValue]);
@@ -38,12 +41,14 @@ const GameBoard = () => {
     (p) => p.userId.toLowerCase() !== user.id.toLowerCase(),
   );
 
+  // Khoá tương tác nếu đang trong quá trình Combat
   const isMyTurn =
+    !isAnimatingCombat &&
     gameState.currentTurnUserId.toLowerCase() === user.id.toLowerCase();
+
   const hasDrawnCard = !!myPlayer?.drawnCard;
   const pendingSkill = gameState.pendingSkillValue;
 
-  // Phân loại các trạng thái chờ kỹ năng
   const isTargetingOpponentCard =
     isMyTurn && (pendingSkill === 3 || pendingSkill === 6);
   const isTargetingOwnCardSingle = isMyTurn && pendingSkill === 1;
@@ -54,54 +59,42 @@ const GameBoard = () => {
     gameState.discardPile.length > 0
       ? gameState.discardPile[gameState.discardPile.length - 1]
       : null;
-
-  // TRUYỀN DATA LÁ SỐ 2 VÀO DECK
   const topDeckCardId =
     gameState.isTopDeckCardRevealed && gameState.drawPile.length > 0
       ? gameState.drawPile[0]
       : null;
 
   const handleDrawCard = async () => {
-    if (isMyTurn && !hasDrawnCard && !pendingSkill) {
-      await drawCard(roomCode);
-    }
+    if (isMyTurn && !hasDrawnCard && !pendingSkill) await drawCard(roomCode);
   };
 
   const handlePlayCard = async (discardedCardId) => {
-    if (isMyTurn && hasDrawnCard && !pendingSkill) {
+    if (isMyTurn && hasDrawnCard && !pendingSkill)
       await playCard(roomCode, discardedCardId);
-    }
   };
 
   const handleTargetOpponentCard = async (targetCardId) => {
-    if (isTargetingOpponentCard) {
+    if (isTargetingOpponentCard)
       await submitSkillAction(roomCode, { targetCardId: targetCardId });
-    }
   };
 
   const handleTargetOwnCard = async (targetCardId) => {
-    // Lấy thông tin lá bài mà người chơi vừa click
     const targetCard = myPlayer?.hand?.find((c) => c.cardId === targetCardId);
 
     if (isTargetingOwnCardSingle) {
-      // LOGIC MỚI: Chặn click nếu lá bài đã lật
       if (targetCard && targetCard.isRevealed) {
         alert("Lá bài này đã lộ diện rồi! Hãy chọn một lá đang úp nhé.");
-        return; // Dừng hàm lại, không gửi request lên Server
+        return;
       }
-
       await submitSkillAction(roomCode, { targetCardId: targetCardId });
     } else if (isTargetingOwnCardDouble) {
       let newSelected = [...selectedOwnCards];
       if (newSelected.includes(targetCardId)) {
-        newSelected = newSelected.filter((id) => id !== targetCardId); // Bỏ chọn
+        newSelected = newSelected.filter((id) => id !== targetCardId);
       } else {
-        newSelected.push(targetCardId); // Chọn thêm
+        newSelected.push(targetCardId);
       }
-
       setSelectedOwnCards(newSelected);
-
-      // Đủ 2 lá thì tự động submit
       if (newSelected.length === 2) {
         await submitSkillAction(roomCode, {
           targetCardId: newSelected[0],
@@ -113,17 +106,15 @@ const GameBoard = () => {
   };
 
   const handleTargetColorSubmit = async (color1, color2) => {
-    if (isTargetingColor) {
+    if (isTargetingColor)
       await submitSkillAction(roomCode, {
         targetColor1: color1,
         targetColor2: color2,
       });
-    }
   };
 
   return (
     <div className="fixed inset-0 pt-24 pb-8 w-full h-full bg-[#0a0f12] flex items-center justify-center font-['Inter'] px-8 select-none overflow-hidden box-border perspective-1000">
-      {/* BANNER THÔNG BÁO KỸ NĂNG 3, 6 (Chọn 1 bài đối thủ) */}
       {isTargetingOpponentCard && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
           <div className="bg-game-vanhelsing-blood/90 backdrop-blur-md border border-game-vanhelsing-blood text-white px-8 py-3 rounded-full text-sm xl:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(154,27,31,0.8)] animate-pulse flex items-center gap-3">
@@ -145,7 +136,6 @@ const GameBoard = () => {
         </div>
       )}
 
-      {/* BANNER THÔNG BÁO KỸ NĂNG 1 (Chọn 1 bài bản thân) */}
       {isTargetingOwnCardSingle && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
           <div className="bg-game-dracula-orange/90 backdrop-blur-md border border-game-dracula-orange text-black px-8 py-3 rounded-full text-sm xl:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,85,37,0.8)] animate-pulse flex items-center gap-3">
@@ -173,7 +163,6 @@ const GameBoard = () => {
         </div>
       )}
 
-      {/* BANNER THÔNG BÁO KỸ NĂNG 4 (Chọn 2 bài bản thân) */}
       {isTargetingOwnCardDouble && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
           <div className="bg-game-dracula-orange/90 backdrop-blur-md border border-game-dracula-orange text-black px-8 py-3 rounded-full text-sm xl:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,85,37,0.8)] animate-pulse flex items-center gap-3">
@@ -195,7 +184,6 @@ const GameBoard = () => {
         </div>
       )}
 
-      {/* BANNER THÔNG BÁO KỸ NĂNG 7 (Chọn màu) */}
       {isTargetingColor && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
           <div className="bg-game-dracula-orange/90 backdrop-blur-md border border-game-dracula-orange text-black px-8 py-3 rounded-full text-sm xl:text-base font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(225,85,37,0.8)] animate-pulse flex items-center gap-3">
@@ -238,6 +226,7 @@ const GameBoard = () => {
             player={opponent}
             type="opponent"
             hoveredDistrict={hoveredDistrict}
+            forcedDistrict={activeCombatDistrict}
             setHoveredDistrict={setHoveredDistrict}
             isMyTurn={false}
             hasDrawnCard={false}
@@ -266,9 +255,15 @@ const GameBoard = () => {
                 preserveAspectRatio="none"
               >
                 {districts.map((district) => {
-                  const isHovered = hoveredDistrict === district.id;
-                  const isOthersHovered =
-                    hoveredDistrict !== null && hoveredDistrict !== district.id;
+                  const isFightingNow = activeCombatDistrict === district.id;
+                  const isHovered =
+                    isFightingNow ||
+                    (!activeCombatDistrict && hoveredDistrict === district.id);
+                  const isOthersHovered = activeCombatDistrict
+                    ? !isFightingNow
+                    : hoveredDistrict !== null &&
+                      hoveredDistrict !== district.id;
+
                   return (
                     <polygon
                       key={district.id}
@@ -277,16 +272,22 @@ const GameBoard = () => {
                         .join(" ")}
                       className="pointer-events-auto cursor-pointer transition-colors duration-500 ease-in-out"
                       style={{
-                        fill: isOthersHovered
-                          ? "rgba(0, 0, 0, 0.75)"
-                          : isHovered
-                            ? "rgba(255, 255, 255, 0.15)"
-                            : "transparent",
+                        fill: isFightingNow
+                          ? "rgba(255, 255, 255, 0.15)"
+                          : isOthersHovered
+                            ? "rgba(0, 0, 0, 0.6)"
+                            : isHovered
+                              ? "rgba(255, 255, 255, 0.1)"
+                              : "transparent",
                         stroke: "transparent",
                         strokeWidth: "0",
                       }}
-                      onMouseEnter={() => setHoveredDistrict(district.id)}
-                      onMouseLeave={() => setHoveredDistrict(null)}
+                      onMouseEnter={() =>
+                        !isAnimatingCombat && setHoveredDistrict(district.id)
+                      }
+                      onMouseLeave={() =>
+                        !isAnimatingCombat && setHoveredDistrict(null)
+                      }
                     />
                   );
                 })}
@@ -298,6 +299,7 @@ const GameBoard = () => {
             player={myPlayer}
             type="self"
             hoveredDistrict={hoveredDistrict}
+            forcedDistrict={activeCombatDistrict}
             setHoveredDistrict={setHoveredDistrict}
             isMyTurn={isMyTurn}
             hasDrawnCard={hasDrawnCard}

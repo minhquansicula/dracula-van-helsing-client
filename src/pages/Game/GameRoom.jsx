@@ -1,5 +1,5 @@
 // src/pages/Game/GameRoom.jsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
@@ -21,7 +21,6 @@ const GameRoom = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // FIX LỖI Ở ĐÂY: Thêm leaveRoom vào danh sách lấy từ store
   const {
     gameState,
     selectRole,
@@ -30,39 +29,239 @@ const GameRoom = () => {
     resetGame,
     callEndRound,
     leaveRoom,
+    isConnected,
+    checkActiveMatch,
+    connect,
   } = useGameStore();
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRulebookOpen, setIsRulebookOpen] = useState(false);
-
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showGameBoard, setShowGameBoard] = useState(false);
-  const [showRoleAnnouncement, setShowRoleAnnouncement] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // --- CINEMATIC COMBAT ENGINE STATES ---
+  const [displayState, setDisplayState] = useState(null);
+  const displayStateRef = useRef(null);
+  const [combatQueue, setCombatQueue] = useState([]);
+  const [currentCombatIndex, setCurrentCombatIndex] = useState(-1);
+  // Trạng thái khu vực giao tranh giờ là một Object: { index, phase: 'focus' | 'resolve' }
+  const [activeCombatDistrict, setActiveCombatDistrict] = useState(null);
+  const [announcement, setAnnouncement] = useState(null);
+
+  useEffect(() => {
+    if (!isConnected && !error) navigate(ROUTES.LOBBY);
+  }, [isConnected, error, navigate]);
 
   useEffect(() => {
     return () => resetGame();
   }, [resetGame]);
 
   useEffect(() => {
-    if (gameState?.status === ROOM_STATUS.PLAYING && !showGameBoard) {
+    const handleReconnect = async () => {
+      const token = localStorage.getItem("token");
+      if (!isConnected && token) {
+        await connect(token);
+        const activeCode = await checkActiveMatch();
+        if (!activeCode || activeCode !== roomCode) navigate(ROUTES.LOBBY);
+      }
+      setIsInitialLoading(false);
+    };
+    handleReconnect();
+  }, [isConnected, roomCode, connect, checkActiveMatch, navigate]);
+
+  // ENGINE TẠO KỊCH BẢN GIAO TRANH
+  useEffect(() => {
+    if (!gameState) return;
+
+    if (!displayStateRef.current) {
+      setDisplayState(gameState);
+      displayStateRef.current = gameState;
+      return;
+    }
+
+    const oldState = displayStateRef.current;
+    const isNewRound = gameState.roundNumber > oldState.roundNumber;
+    const isNewlyFinished =
+      gameState.status === ROOM_STATUS.FINISHED &&
+      oldState.status === ROOM_STATUS.PLAYING;
+
+    if (
+      (isNewRound || isNewlyFinished) &&
+      combatQueue.length === 0 &&
+      currentCombatIndex === -1
+    ) {
+      if (isNewlyFinished && gameState.endReason === "Surrender") {
+        setDisplayState(gameState);
+        displayStateRef.current = gameState;
+        return;
+      }
+
+      const queue = [];
+      let currentDraculaHP = oldState.players.find(
+        (p) => p.faction === FACTION.DRACULA,
+      ).health;
+
+      for (let i = 0; i < 5; i++) {
+        const oldZone = oldState.zones[i];
+        const newZone = gameState.zones[i] || oldZone;
+        let draculaWon = newZone.vampireTokens > oldZone.vampireTokens;
+
+        queue.push({
+          districtIndex: i + 1,
+          winner: draculaWon ? FACTION.DRACULA : FACTION.VAN_HELSING,
+        });
+
+        if (draculaWon) {
+          if (oldZone.vampireTokens + 1 >= 4) break;
+        } else {
+          currentDraculaHP--;
+          if (currentDraculaHP <= 0) break;
+        }
+      }
+
+      // Ngửa toàn bộ bài để bắt đầu chiếu phim
+      const revealedState = JSON.parse(JSON.stringify(oldState));
+      revealedState.players.forEach((p) =>
+        p.hand.forEach((c) => (c.isRevealed = true)),
+      );
+      revealedState.pendingSkillValue = null;
+
+      setDisplayState(revealedState);
+      displayStateRef.current = revealedState;
+      setCombatQueue(queue);
+      setCurrentCombatIndex(0);
+    } else if (combatQueue.length === 0) {
+      setDisplayState(gameState);
+      displayStateRef.current = gameState;
+    }
+  }, [gameState]);
+
+  // MÁY CHẠY ANIMATION THEO TỪNG NHỊP (TIMELINE)
+  useEffect(() => {
+    if (currentCombatIndex >= 0 && currentCombatIndex < combatQueue.length) {
+      const step = combatQueue[currentCombatIndex];
+
+      // PHASE 1: LẤY ĐÀ (FOCUS) - Hai bài bay lên, phát sáng chờ đợi
+      setActiveCombatDistrict({ index: step.districtIndex, phase: "focus" });
+
+      const timer1 = setTimeout(() => {
+        // PHASE 2: VA CHẠM (RESOLVE) - Trừ máu, kẻ thua gục xuống, kẻ thắng rực sáng
+        setActiveCombatDistrict({
+          index: step.districtIndex,
+          phase: "resolve",
+        });
+
+        setDisplayState((prev) => {
+          const next = JSON.parse(JSON.stringify(prev));
+          const dracula = next.players.find(
+            (p) => p.faction === FACTION.DRACULA,
+          );
+          const vh = next.players.find(
+            (p) => p.faction === FACTION.VAN_HELSING,
+          );
+
+          // Cấp cờ VInh quang / Gục ngã cho từng lá bài
+          if (step.winner === FACTION.DRACULA) {
+            vh.hand[step.districtIndex - 1].isLoser = true;
+            dracula.hand[step.districtIndex - 1].isWinner = true;
+            next.zones[step.districtIndex - 1].humanTokens--;
+            next.zones[step.districtIndex - 1].vampireTokens++;
+          } else {
+            dracula.hand[step.districtIndex - 1].isLoser = true;
+            vh.hand[step.districtIndex - 1].isWinner = true;
+            dracula.health--;
+          }
+          displayStateRef.current = next;
+          return next;
+        });
+
+        // Chờ người chơi tận hưởng cảm giác đánh trúng rồi mới qua nhịp tiếp theo
+        const timer2 = setTimeout(() => {
+          setActiveCombatDistrict(null);
+          setCurrentCombatIndex((idx) => idx + 1);
+        }, 1200);
+
+        return () => clearTimeout(timer2);
+      }, 800); // Thời gian bay lên lấy đà mất 0.8s
+
+      return () => clearTimeout(timer1);
+    } else if (
+      currentCombatIndex === combatQueue.length &&
+      combatQueue.length > 0
+    ) {
+      // HẬU KIẾN: Kết thúc chùm Combat
+      setActiveCombatDistrict(null);
+      const timer = setTimeout(() => {
+        setCombatQueue([]);
+        setCurrentCombatIndex(-1);
+        setDisplayState(gameState);
+        displayStateRef.current = gameState;
+
+        if (gameState.status === ROOM_STATUS.PLAYING) {
+          const isFinalRound = gameState.roundNumber === 5;
+          setAnnouncement({
+            subtitle: isFinalRound
+              ? "Đêm cuối cùng. Không còn đường lui."
+              : "Phán xét hoàn tất.",
+            title: isFinalRound
+              ? "TRẬN CHIẾN CUỐI"
+              : `BẮT ĐẦU VÒNG ${gameState.roundNumber}`,
+            titleClass: isFinalRound
+              ? "text-game-vanhelsing-blood drop-shadow-[0_0_50px_rgba(154,27,31,1)]"
+              : "text-game-bone-white drop-shadow-[0_0_30px_rgba(255,255,255,0.6)]",
+          });
+          setTimeout(() => setAnnouncement(null), 3000);
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentCombatIndex, combatQueue, gameState]);
+
+  useEffect(() => {
+    if (displayState?.status === ROOM_STATUS.PLAYING && !showGameBoard) {
       setIsLoading(false);
       setIsTransitioning(true);
 
       const transitionTimer = setTimeout(() => {
         setIsTransitioning(false);
         setShowGameBoard(true);
-        setShowRoleAnnouncement(true);
-
-        setTimeout(() => {
-          setShowRoleAnnouncement(false);
-        }, 2500);
+        setAnnouncement({
+          subtitle: "Bạn hóa thân thành",
+          title: isDracula ? "Dracula" : "Van Helsing",
+          titleClass: isDracula
+            ? "text-game-dracula-orange drop-shadow-[0_0_40px_rgba(225,85,37,0.8)]"
+            : "text-game-vanhelsing-blood drop-shadow-[0_0_40px_rgba(154,27,31,0.8)]",
+        });
+        setTimeout(() => setAnnouncement(null), 3000);
       }, 2500);
-
       return () => clearTimeout(transitionTimer);
     }
-  }, [gameState?.status, showGameBoard]);
+  }, [displayState?.status, showGameBoard]);
+
+  const isAnimatingCombat = combatQueue.length > 0;
+  const targetState = displayState || gameState;
+
+  const myPlayer = targetState?.players?.find(
+    (p) => p.userId.toLowerCase() === user?.id?.toLowerCase(),
+  );
+  const isDracula = myPlayer?.faction === FACTION.DRACULA;
+  const isMyTurn =
+    !isAnimatingCombat &&
+    targetState?.currentTurnUserId?.toLowerCase() === user?.id?.toLowerCase();
+
+  const hasDrawnCard = !!myPlayer?.drawnCard;
+  const pendingSkill = targetState?.pendingSkillValue;
+  const discardPileLength = targetState?.discardPile?.length || 0;
+
+  const canCallEndRound =
+    showGameBoard &&
+    isMyTurn &&
+    !hasDrawnCard &&
+    !pendingSkill &&
+    discardPileLength >= 6;
 
   const handleSelectRole = async (faction) => {
     setSelectedRole(faction);
@@ -77,35 +276,14 @@ const GameRoom = () => {
     }
   };
 
-  // LOGIC KẾT THÚC VÒNG TẠI HEADER
-  const myPlayer = gameState?.players?.find(
-    (p) => p.userId.toLowerCase() === user?.id?.toLowerCase(),
-  );
-  const isDracula = myPlayer?.faction === FACTION.DRACULA;
-  const isMyTurn =
-    gameState?.currentTurnUserId?.toLowerCase() === user?.id?.toLowerCase();
-
-  const hasDrawnCard = !!myPlayer?.drawnCard;
-  const pendingSkill = gameState?.pendingSkillValue;
-  const discardPileLength = gameState?.discardPile?.length || 0;
-
-  // Điều kiện để hiện nút "Gọi Kết Thúc Vòng"
-  const canCallEndRound =
-    showGameBoard &&
-    isMyTurn &&
-    !hasDrawnCard &&
-    !pendingSkill &&
-    discardPileLength >= 6;
-
   const handleCallEndRound = async () => {
-    if (canCallEndRound) {
-      if (
-        window.confirm(
-          "Mộ bài đã đủ 6 lá. Bạn có muốn Kết Thúc Vòng ngay lúc này?",
-        )
-      ) {
-        await callEndRound(roomCode);
-      }
+    if (
+      canCallEndRound &&
+      window.confirm(
+        "Mộ bài đã đủ 6 lá. Bạn có muốn Kết Thúc Vòng ngay lúc này?",
+      )
+    ) {
+      await callEndRound(roomCode);
     }
   };
 
@@ -119,7 +297,8 @@ const GameRoom = () => {
           {error}
         </p>
         <Button
-          onClick={() => {
+          onClick={async () => {
+            await leaveRoom();
             resetGame();
             navigate(ROUTES.LOBBY);
           }}
@@ -131,17 +310,28 @@ const GameRoom = () => {
     );
   }
 
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0f12] flex flex-col items-center justify-center">
+        <p className="text-game-dracula-orange animate-pulse tracking-[0.5em] uppercase text-xs mb-4">
+          Đang khôi phục hiệp ước...
+        </p>
+      </div>
+    );
+  }
+
   const isWaiting =
-    !gameState ||
-    (gameState.status === ROOM_STATUS.WAITING && gameState.players?.length < 2);
+    !targetState ||
+    (targetState.status === ROOM_STATUS.WAITING &&
+      targetState.players?.length < 2);
   const isSelectingRole =
-    gameState?.status === ROOM_STATUS.WAITING &&
-    gameState?.players?.length === 2;
-  const isFinished = gameState?.status === ROOM_STATUS.FINISHED;
+    targetState?.status === ROOM_STATUS.WAITING &&
+    targetState?.players?.length === 2;
+  const isFinished = displayState?.status === ROOM_STATUS.FINISHED;
 
   const renderCurrentPhase = () => {
     if (isWaiting) return <WaitingPhase roomCode={roomCode} />;
-    if (isSelectingRole) {
+    if (isSelectingRole)
       return (
         <RoleSelectionPhase
           selectedRole={selectedRole}
@@ -149,14 +339,15 @@ const GameRoom = () => {
           onSelectRole={handleSelectRole}
         />
       );
-    }
-    if (isTransitioning) {
-      return <TransitionPhase />;
-    }
+    if (isTransitioning) return <TransitionPhase />;
     if (showGameBoard || isFinished) {
       return (
         <div className="flex-grow w-full h-full animate-in fade-in duration-1000 relative">
-          <GameBoard />
+          <GameBoard
+            displayState={displayState}
+            activeCombatDistrict={activeCombatDistrict}
+            isAnimatingCombat={isAnimatingCombat} // THÊM DÒNG NÀY
+          />
         </div>
       );
     }
@@ -165,30 +356,31 @@ const GameRoom = () => {
 
   return (
     <div className="min-h-screen bg-game-dark-teal text-game-bone-white relative overflow-hidden flex flex-col font-['Inter'] selection:bg-game-dracula-orange/30">
-      {isFinished && (
+      {isFinished && !isAnimatingCombat && (
         <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
           <div className="bg-[#0d1316] border border-white/10 p-12 flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] rounded-sm">
             <h2
-              className={`text-5xl md:text-7xl font-black uppercase mb-6 font-['Playfair_Display'] ${gameState.winnerId.toLowerCase() === user.id.toLowerCase() ? "text-game-dracula-orange drop-shadow-[0_0_20px_rgba(225,85,37,0.5)]" : "text-game-vanhelsing-blood drop-shadow-[0_0_20px_rgba(154,27,31,0.5)]"}`}
+              className={`text-5xl md:text-7xl font-black uppercase mb-6 font-['Playfair_Display'] ${targetState.winnerId.toLowerCase() === user.id.toLowerCase() ? "text-game-dracula-orange drop-shadow-[0_0_20px_rgba(225,85,37,0.5)]" : "text-game-vanhelsing-blood drop-shadow-[0_0_20px_rgba(154,27,31,0.5)]"}`}
             >
-              {gameState.winnerId.toLowerCase() === user.id.toLowerCase()
+              {targetState.winnerId.toLowerCase() === user.id.toLowerCase()
                 ? "Chiến Thắng"
                 : "Thất Bại"}
             </h2>
             <p className="text-white/60 mb-10 uppercase tracking-[0.3em] text-xs font-bold">
-              {gameState.endReason === "Surrender"
-                ? gameState.winnerId.toLowerCase() === user.id.toLowerCase()
+              {targetState.endReason === "Surrender"
+                ? targetState.winnerId.toLowerCase() === user.id.toLowerCase()
                   ? "Đối thủ đã hèn nhát bỏ cuộc."
                   : "Bạn đã đầu hàng trước nỗi sợ."
                 : "Hiệp ước đã kết thúc."}
             </p>
             <Button
-              onClick={() => {
+              onClick={async () => {
+                await leaveRoom();
                 resetGame();
                 navigate(ROUTES.LOBBY);
               }}
               variant={
-                gameState.winnerId.toLowerCase() === user.id.toLowerCase()
+                targetState.winnerId.toLowerCase() === user.id.toLowerCase()
                   ? "dracula"
                   : "vanhelsing"
               }
@@ -200,7 +392,7 @@ const GameRoom = () => {
       )}
 
       <AnimatePresence>
-        {showRoleAnnouncement && (
+        {announcement && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -208,23 +400,19 @@ const GameRoom = () => {
             transition={{ duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
             className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none"
           >
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center text-center">
               <motion.p
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
                 className="text-white/60 uppercase tracking-[0.5em] text-xs md:text-sm font-bold mb-4"
               >
-                Bạn hóa thân thành
+                {announcement.subtitle}
               </motion.p>
               <h2
-                className={`text-6xl md:text-8xl font-black uppercase font-['Playfair_Display'] ${
-                  isDracula
-                    ? "text-game-dracula-orange drop-shadow-[0_0_40px_rgba(225,85,37,0.8)]"
-                    : "text-game-vanhelsing-blood drop-shadow-[0_0_40px_rgba(154,27,31,0.8)]"
-                }`}
+                className={`text-6xl md:text-8xl font-black uppercase font-['Playfair_Display'] ${announcement.titleClass}`}
               >
-                {isDracula ? "Dracula" : "Van Helsing"}
+                {announcement.title}
               </h2>
             </div>
           </motion.div>
@@ -244,8 +432,8 @@ const GameRoom = () => {
               {isWaiting && "Đang chờ đối thủ..."}
               {isSelectingRole && "Nghi lễ chọn phe..."}
               {(showGameBoard || isFinished) &&
-                gameState &&
-                `Vòng ${gameState.roundNumber} - Phe ${isDracula ? "Đêm Tối" : "Thợ Săn"}`}
+                targetState &&
+                `Vòng ${targetState.roundNumber} - Phe ${isDracula ? "Đêm Tối" : "Thợ Săn"}`}
             </div>
             <div className="h-4 w-px bg-white/10 hidden sm:block" />
             <h2 className="text-xl font-black text-game-bone-white uppercase tracking-widest shadow-text-md font-['Playfair_Display'] hidden xl:block whitespace-nowrap">
@@ -257,7 +445,7 @@ const GameRoom = () => {
           </div>
 
           <div className="flex-1 flex justify-center">
-            {showGameBoard && !isFinished && !showRoleAnnouncement && (
+            {showGameBoard && !isFinished && !announcement && (
               <div className="pointer-events-none animate-in fade-in duration-500">
                 {isMyTurn ? (
                   <div className="bg-[#0a0f12]/90 border border-game-dracula-orange/60 text-game-dracula-orange px-6 py-1.5 xl:px-8 xl:py-2 rounded-full text-[10px] xl:text-xs font-black uppercase tracking-[0.25em] shadow-[0_0_15px_rgba(225,85,37,0.4)] animate-pulse">
@@ -265,7 +453,9 @@ const GameRoom = () => {
                   </div>
                 ) : (
                   <div className="bg-[#0a0f12]/80 border border-white/10 text-white/40 px-6 py-1.5 xl:px-8 xl:py-2 rounded-full text-[10px] xl:text-xs font-bold uppercase tracking-[0.2em]">
-                    Đối thủ đang suy nghĩ...
+                    {isAnimatingCombat
+                      ? "Đang tiến hành phán xét..."
+                      : "Đối thủ đang suy nghĩ..."}
                   </div>
                 )}
               </div>
@@ -273,7 +463,6 @@ const GameRoom = () => {
           </div>
 
           <div className="relative flex justify-end w-1/3 items-center gap-2 xl:gap-4">
-            {/* NÚT GỌI KẾT THÚC VÒNG TRÊN HEADER */}
             {canCallEndRound && !isFinished && (
               <button
                 onClick={handleCallEndRound}
@@ -282,7 +471,6 @@ const GameRoom = () => {
                 Kết Thúc Vòng
               </button>
             )}
-
             <button
               onClick={() => setIsRulebookOpen(true)}
               className="p-2 text-white/40 hover:text-game-dracula-orange transition-colors duration-300 outline-none"
@@ -302,9 +490,7 @@ const GameRoom = () => {
                 />
               </svg>
             </button>
-
             <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
-
             <div className="relative">
               <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -330,7 +516,6 @@ const GameRoom = () => {
                   />
                 </svg>
               </button>
-
               {isSettingsOpen && (
                 <div className="absolute top-full mt-4 right-0 w-56 bg-[#0d1316]/95 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-white/5">
