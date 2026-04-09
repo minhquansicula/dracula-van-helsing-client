@@ -1,6 +1,7 @@
 // src/constants/preloadAssets.js
 
 import boardBg from "../assets/images/board-bg.png";
+import bgCircleImg from "../assets/images/bgCircle.png";
 
 const basePath =
   import.meta.env && import.meta.env.BASE_URL ? import.meta.env.BASE_URL : "/";
@@ -34,6 +35,7 @@ for (let colorId = 0; colorId <= 3; colorId++) {
 
 export const GAME_ASSETS_TO_PRELOAD = [
   boardBg,
+  bgCircleImg,
   `${basePath}images/cards/card_back.png`,
   ...cardImages,
   ...humanTokens,

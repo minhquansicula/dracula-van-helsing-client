@@ -143,6 +143,8 @@ const GameRoom = () => {
       revealedState.players.forEach((p) => {
         const actualPlayer = gameState.players.find(gp => gp.userId === p.userId);
         if (actualPlayer) {
+          p.isReadyForNextRound = actualPlayer.isReadyForNextRound; 
+          
           p.hand.forEach((c, idx) => {
             c.isRevealed = true;
             c.cardId = actualPlayer.hand[idx].cardId; 
@@ -158,12 +160,10 @@ const GameRoom = () => {
       setCurrentCombatIndex(0);
 
     } else if (combatQueue.length === 0) {
-      // FIX LỖI: Nếu đang ở màn hình Review, KHÔNG đè lại State cũ để giữ nguyên Bài Ngửa và Máu vừa trừ.
       if (!isReviewPhase) {
         setDisplayState(gameState);
         displayStateRef.current = gameState;
       } else {
-        // Chỉ cập nhật duy nhất cờ "Đã sẵn sàng" để UI biết đối thủ đã bấm nút Tiếp tục chưa
         setDisplayState((prev) => {
           const next = JSON.parse(JSON.stringify(prev));
           next.players.forEach(p => {
@@ -222,7 +222,6 @@ const GameRoom = () => {
         setCombatQueue([]);
         setCurrentCombatIndex(-1);
         
-        // FIX LỖI: Không reset lại State về dữ liệu Server (máu chưa trừ) nếu đang Review
         const isReviewPhase = gameState.status === 3 || gameState.status === "CombatReview";
         if (!isReviewPhase) {
           setDisplayState(gameState);
@@ -279,7 +278,8 @@ const GameRoom = () => {
   const pendingSkill = targetState?.pendingSkillValue;
   const discardPileLength = targetState?.discardPile?.length || 0;
 
-  const canCallEndRound = showGameBoard && isMyTurn && !hasDrawnCard && !pendingSkill && discardPileLength >= 6;
+  // SỬA TẠI ĐÂY: Thêm điều kiện !targetState?.isLastTurn để ẩn nút kết thúc vòng nếu đã có người bấm trước đó
+  const canCallEndRound = showGameBoard && isMyTurn && !hasDrawnCard && !pendingSkill && discardPileLength >= 6 && !targetState?.isLastTurn;
 
   const handleSelectRole = async (faction) => {
     setSelectedRole(faction);
@@ -383,26 +383,34 @@ const GameRoom = () => {
 
       <AnimatePresence>
         {announcement && (
+          // KHỐI 1: LỚP NỀN ĐEN (Chỉ Fade in/out, phủ kín 100% màn hình, không bị co giãn)
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-            transition={{ duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
-            className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-md pointer-events-none"
           >
-            <div className="flex flex-col items-center text-center">
+            {/* KHỐI 2: CHỮ (Mới được áp dụng hiệu ứng Scale, bay lượn, làm mờ) */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 1.2, filter: "blur(10px)" }}
+              transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1] }}
+              className="flex flex-col items-center text-center"
+            >
               <motion.p
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-white/60 uppercase tracking-[0.5em] text-xs md:text-sm font-bold mb-4"
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-white/70 uppercase tracking-[0.5em] text-sm md:text-base font-bold mb-4"
               >
                 {announcement.subtitle}
               </motion.p>
               <h2 className={`text-6xl md:text-8xl font-black uppercase font-['Playfair_Display'] ${announcement.titleClass}`}>
                 {announcement.title}
               </h2>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
