@@ -10,7 +10,7 @@ class SignalRService {
     if (this.connection) return;
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://localhost:7295/gamehub", {
+      .withUrl(import.meta.env.VITE_HUB_URL ||"https://localhost:7295/gamehub", {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect() // Tự động kết nối lại nếu rớt mạng
