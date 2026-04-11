@@ -1,11 +1,11 @@
-🧛‍♂️ Dracula vs Van Helsing - Web Client
+# 🧛‍♂️ Dracula vs Van Helsing - Web Client
 
 This is the frontend repository for the Dracula vs Van Helsing real-time multiplayer board game. It provides an interactive, modern, and responsive user interface for players to engage in asymmetric strategic battles.
 
-🔗 Backend Repository: https://github.com/minhquansicula/dracula-api-backend
-🌐 Live Demo: https://boardgame-dracula-vanhelsing.vercel.app/
+> 🔗 Backend Repository: https://github.com/minhquansicula/dracula-api-backend
+> 🌐 Live Demo: https://boardgame-dracula-vanhelsing.vercel.app/
 
-✨ Key Features
+## ✨ Key Features
 
 Interactive Game Board: Modern UI/UX design with smooth drag-and-drop/click mechanics for card playing and token movements.
 
@@ -17,7 +17,7 @@ Lobby & Matchmaking: Real-time room creation, sharing room codes, and live statu
 
 Secure Access: JWT-based authentication flow for user login and registration.
 
-🛠 Tech Stack
+## 🛠 Tech Stack
 
 Core: React.js, Vite (Build Tool)
 
@@ -27,9 +27,9 @@ State Management & Routing: React Router DOM
 
 Real-time Communication: @microsoft/signalr
 
-🚀 Local Development Setup
+## 🚀 Local Development Setup
 
-Prerequisites
+### Prerequisites
 
 Make sure you have the following installed on your machine:
 
@@ -37,7 +37,7 @@ Node.js (v18 or higher)
 
 npm or yarn
 
-Installation Steps
+### Installation Steps
 
 Clone the repository:
 
@@ -45,13 +45,13 @@ git clone [https://github.com/minhquansicula/dracula-frontend.git](https://githu
 cd dracula-frontend
 
 
-Install dependencies:
+### Install dependencies:
 Sử dụng npm để cài đặt các thư viện cần thiết:
 
 npm install
 
 
-Configure Environment Variables:
+### Configure Environment Variables:
 Tạo một file .env ở thư mục gốc của dự án (ngang hàng với file package.json). Thêm các biến môi trường sau để kết nối với Backend cục bộ:
 
 VITE_API_URL=https://localhost:xxxx/api
@@ -60,7 +60,7 @@ VITE_HUB_URL=https://localhost:xxxx/gamehub
 
 (Lưu ý: Thay thế xxxx bằng port mà server .NET của bạn đang chạy, ví dụ: 5001 hoặc 7280).
 
-Start the development server:
+### Start the development server:
 Khởi chạy ứng dụng trên môi trường local:
 
 npm run dev
@@ -68,7 +68,7 @@ npm run dev
 
 Ứng dụng sẽ tự động mở hoặc bạn có thể truy cập thông qua trình duyệt tại địa chỉ: http://localhost:5173.
 
-📁 Project Structure (Overview)
+## 📁 Project Structure (Overview)
 
 Cấu trúc thư mục được thiết kế theo module để dễ dàng mở rộng và bảo trì:
 
@@ -82,7 +82,7 @@ src/
 └── utils/           # Helper functions and constants
 
 
-🌐 Deployment
+## 🌐 Deployment
 
 Dự án này được tối ưu để triển khai (deploy) trên nền tảng Vercel.
 
