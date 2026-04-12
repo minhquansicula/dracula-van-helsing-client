@@ -1,7 +1,7 @@
 # Dracula vs Van Helsing - Web Client
 Welcome to the Dracula vs Van Helsing frontend repository. This project provides an interactive, modern, and responsive user interface for players to engage in asymmetric strategic battles within a real-time multiplayer board game setting. Explore the live version at https://boardgame-dracula-vanhelsing.vercel.app/.
 
-Backend Repository: https://github.com/minhquansicula/dracula-api-backend
+Backend Repository: https://github.com/minhquansicula/dracula-vanhelsing-api
 
 ## Key Features
 - Interactive Game Board: Modern UI/UX design with smooth drag-and-drop/click mechanics for card playing and token movements.
