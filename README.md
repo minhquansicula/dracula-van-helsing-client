@@ -48,9 +48,9 @@ The project is organized into a modular structure for optimal scalability and ma
 ```bash
 git clone https://github.com/minhquansicula/dracula-frontend.git
 cd dracula-frontend
-2. Install dependencies:
 ```
 
+2. Install dependencies:
 ```bash
 npm install
 ```
