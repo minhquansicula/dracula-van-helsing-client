@@ -59,6 +59,17 @@ const Register = () => {
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-game-vanhelsing-blood rounded-full blur-[150px] opacity-20"></div>
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-game-bone-white rounded-full blur-[150px] opacity-10"></div>
 
+        {/* Nút quay lại */}
+        <Link
+          to={ROUTES.HOME}
+          className="absolute top-6 left-6 z-20 flex items-center gap-2 text-game-bone-white/50 hover:text-game-bone-white transition-all duration-300 group"
+        >
+          <svg className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Quay Lại</span>
+        </Link>
+
         <div className="bg-black/60 p-10 rounded-sm border border-game-bone-white/10 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] relative z-10 backdrop-blur-sm">
           <header className="text-center mb-10">
             <h1 className="text-game-vanhelsing-blood text-xs font-black uppercase tracking-[0.3em] mb-2 shadow-text-sm">
