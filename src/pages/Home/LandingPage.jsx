@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
 import Button from "../../components/ui/Button";
+import RulebookModal from "../../components/game/RulebookModal";
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isRulebookOpen, setIsRulebookOpen] = useState(false);
 
   const handleStartHunt = (e) => {
     e.preventDefault();
@@ -83,26 +85,20 @@ const LandingPage = () => {
             </Button>
           </div>
 
-          {/* Nút phụ: Luật chơi - Thiết kế Minimalist hiện đại */}
+          {/* Nút phụ: Luật chơi - Mở RulebookModal */}
           <div className="w-full sm:w-auto order-2 sm:order-2">
-            <a
-              href="https://boardgamegeek.com/boardgame/380695/dracula-vs-van-helsing"
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full"
+            <Button
+              variant="vanhelsing"
+              size="lg"
+              className="w-full sm:w-80 text-xl py-6 font-bold uppercase tracking-[0.2em]
+                         bg-transparent border border-white/20 text-white/80 
+                         hover:bg-white/5 hover:border-white/60 hover:text-white
+                         hover:scale-105 transition-all duration-300
+                         font-['Playfair_Display'] rounded-none backdrop-blur-sm"
+              onClick={() => setIsRulebookOpen(true)}
             >
-              <Button
-                variant="vanhelsing"
-                size="lg"
-                className="w-full sm:w-80 text-xl py-6 font-bold uppercase tracking-[0.2em]
-                           bg-transparent border border-white/20 text-white/80 
-                           hover:bg-white/5 hover:border-white/60 hover:text-white
-                           hover:scale-105 transition-all duration-300
-                           font-['Playfair_Display'] rounded-none backdrop-blur-sm"
-              >
-                Xem Luật Chơi
-              </Button>
-            </a>
+              Xem Luật Chơi
+            </Button>
           </div>
         </div>
       </div>
@@ -117,8 +113,15 @@ const LandingPage = () => {
           <div className="h-px w-12 bg-game-bone-white" />
         </div>
       </footer>
+
+      {/* Rulebook Modal */}
+      <RulebookModal
+        isOpen={isRulebookOpen}
+        onClose={() => setIsRulebookOpen(false)}
+      />
     </div>
   );
 };
 
 export default LandingPage;
+
