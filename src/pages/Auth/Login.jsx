@@ -46,7 +46,7 @@ const Login = () => {
 
         {/* Nút quay lại */}
         <Link
-          to={ROUTES.HOME}
+          to={ROUTES.LOBBY}
           className="absolute top-6 left-6 z-20 flex items-center gap-2 text-game-bone-white/50 hover:text-game-bone-white transition-all duration-300 group"
         >
           <svg className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
